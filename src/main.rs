@@ -2,17 +2,18 @@ use {
     clap::{crate_description, crate_name, value_t_or_exit, App, Arg, ArgMatches},
     log::*,
     solana_k8s_cluster::{
-        docker::{DockerConfig, DockerImageConfig},
+        // docker::{DockerConfig, DockerImageConfig},
         genesis::{
-            Genesis, GenesisFlags, SetupConfig, DEFAULT_INTERNAL_NODE_SOL,
+            Genesis, GenesisFlags, SetupConfig,
+             DEFAULT_INTERNAL_NODE_SOL,
             DEFAULT_INTERNAL_NODE_STAKE_SOL,
         },
         initialize_globals,
         kubernetes::{Kubernetes, RuntimeConfig},
-        release::{BuildConfig, Deploy},
+        // release::{BuildConfig, Deploy},
     },
-    solana_sdk::genesis_config::ClusterType,
-    std::{thread, time::Duration},
+    // solana_sdk::genesis_config::ClusterType,
+    // std::{thread, time::Duration},
 };
 
 const BOOTSTRAP_VALIDATOR_REPLICAS: i32 = 1;
@@ -203,15 +204,15 @@ fn parse_matches() -> ArgMatches<'static> {
                 .takes_value(true)
                 .help("Genesis config. max_genesis_archive_unpacked_size"),
         )
-        .arg(
-            Arg::with_name("cluster_type")
-                .long("cluster-type")
-                .possible_values(&ClusterType::STRINGS)
-                .takes_value(true)
-                .help(
-                    "Selects the features that will be enabled for the cluster"
-                ),
-        )
+        // .arg(
+        //     Arg::with_name("cluster_type")
+        //         .long("cluster-type")
+        //         .possible_values(&ClusterType::STRINGS)
+        //         .takes_value(true)
+        //         .help(
+        //             "Selects the features that will be enabled for the cluster"
+        //         ),
+        // )
         .arg(
             Arg::with_name("tpu_enable_udp")
                 .long("tpu-enable-udp")
@@ -247,15 +248,6 @@ async fn main() {
         prebuild_genesis: matches.is_present("prebuild_genesis"),
     };
 
-    let build_config = BuildConfig {
-        release_channel: matches.value_of("release_channel").unwrap_or_default(),
-        deploy_method: matches.value_of("deploy_method").unwrap(),
-        do_build: matches.is_present("do_build"),
-        debug_build: matches.is_present("debug_build"),
-        profile_build: matches.is_present("profile_build"),
-        docker_build: matches.is_present("docker_build"),
-    };
-
     let genesis_flags = GenesisFlags {
         hashes_per_tick: matches.value_of("hashes_per_tick").map(|value_str| {
             value_str
@@ -287,9 +279,9 @@ async fn main() {
                     .parse()
                     .expect("Invalid value for max_genesis_archive_unpacked_size")
             }),
-        cluster_type: matches
-            .value_of("cluster_type")
-            .map(|value_str| value_str.parse().expect("Invalid value for cluster_type")),
+        // cluster_type: matches
+        //     .value_of("cluster_type")
+        //     .map(|value_str| value_str.parse().expect("Invalid value for cluster_type")),
         bootstrap_validator_sol: matches
             .value_of("bootstrap_validator_sol")
             .map(|value_str| {
@@ -354,59 +346,6 @@ async fn main() {
         }
     }
 
-    // Download validator version and Build docker image
-    let docker_image_config = if build_config.docker_build {
-        Some(DockerImageConfig {
-            base_image: matches.value_of("base_image").unwrap_or_default(),
-            image_name: matches.value_of("image_name").unwrap(),
-            tag: matches.value_of("image_tag").unwrap_or_default(),
-            registry: matches.value_of("registry_name").unwrap(),
-        })
-    } else {
-        None
-    };
-
-    let deploy = Deploy::new(build_config.clone());
-    match deploy.prepare().await {
-        Ok(_) => info!("Validator setup prepared successfully"),
-        Err(err) => {
-            error!("Exiting........ {}", err);
-            return;
-        }
-    }
-
-    if let Some(config) = docker_image_config {
-        let docker = DockerConfig::new(config, build_config.deploy_method);
-        let image_types = vec!["bootstrap", "validator"];
-        for image_type in image_types {
-            match docker.build_image(image_type).await {
-                Ok(_) => info!("Docker image built successfully"),
-                Err(err) => {
-                    error!("Exiting........ {}", err);
-                    return;
-                }
-            }
-        }
-
-        // Need to push image to registry so Monogon nodes can pull image from registry to local
-        match docker.push_image("bootstrap").await {
-            Ok(_) => info!("Bootstrap Image pushed successfully to registry"),
-            Err(err) => {
-                error!("{}", err);
-                return;
-            }
-        }
-
-        // Need to push image to registry so Monogon nodes can pull image from registry to local
-        match docker.push_image("validator").await {
-            Ok(_) => info!("Validator Image pushed successfully to registry"),
-            Err(err) => {
-                error!("{}", err);
-                return;
-            }
-        }
-    }
-
     info!("Creating Genesis");
     let mut genesis = Genesis::new(genesis_flags);
     match genesis.generate_faucet() {
@@ -432,187 +371,187 @@ async fn main() {
         }
     }
 
-    // creates genesis and writes to binary file
-    match genesis.generate() {
-        Ok(_) => (),
-        Err(err) => {
-            error!("generate genesis error! {}", err);
-            return;
-        }
-    }
+    // // creates genesis and writes to binary file
+    // match genesis.generate() {
+    //     Ok(_) => (),
+    //     Err(err) => {
+    //         error!("generate genesis error! {}", err);
+    //         return;
+    //     }
+    // }
 
-    // load genesis (test -> this should run in pod)
-    match genesis.verify_genesis_from_file() {
-        Ok(_) => (),
-        Err(err) => {
-            error!("Failed verify genesis from file! err: {}", err);
-            return;
-        }
-    }
+    // // load genesis (test -> this should run in pod)
+    // match genesis.verify_genesis_from_file() {
+    //     Ok(_) => (),
+    //     Err(err) => {
+    //         error!("Failed verify genesis from file! err: {}", err);
+    //         return;
+    //     }
+    // }
 
-    // Begin Kubernetes Setup and Deployment
-    let config_map = match kub_controller.create_genesis_config_map().await {
-        Ok(config_map) => {
-            info!("successfully deployed config map");
-            config_map
-        }
-        Err(err) => {
-            error!("Failed to deploy config map: {}", err);
-            return;
-        }
-    };
+    // // Begin Kubernetes Setup and Deployment
+    // let config_map = match kub_controller.create_genesis_config_map().await {
+    //     Ok(config_map) => {
+    //         info!("successfully deployed config map");
+    //         config_map
+    //     }
+    //     Err(err) => {
+    //         error!("Failed to deploy config map: {}", err);
+    //         return;
+    //     }
+    // };
 
-    let bootstrap_secret = match kub_controller.create_bootstrap_secret("bootstrap-accounts-secret")
-    {
-        Ok(secret) => secret,
-        Err(err) => {
-            error!("Failed to create bootstrap secret! {}", err);
-            return;
-        }
-    };
-    match kub_controller.deploy_secret(&bootstrap_secret).await {
-        Ok(_) => (),
-        Err(err) => {
-            error!("{}", err);
-            return;
-        }
-    }
+    // let bootstrap_secret = match kub_controller.create_bootstrap_secret("bootstrap-accounts-secret")
+    // {
+    //     Ok(secret) => secret,
+    //     Err(err) => {
+    //         error!("Failed to create bootstrap secret! {}", err);
+    //         return;
+    //     }
+    // };
+    // match kub_controller.deploy_secret(&bootstrap_secret).await {
+    //     Ok(_) => (),
+    //     Err(err) => {
+    //         error!("{}", err);
+    //         return;
+    //     }
+    // }
 
-    let label_selector =
-        kub_controller.create_selector("app.kubernetes.io/name", "bootstrap-validator");
-    let bootstrap_replica_set = match kub_controller
-        .create_bootstrap_validator_replicas_set(
-            bootstrap_container_name,
-            bootstrap_image_name,
-            BOOTSTRAP_VALIDATOR_REPLICAS,
-            config_map.metadata.name.clone(),
-            bootstrap_secret.metadata.name.clone(),
-            &label_selector,
-        )
-        .await
-    {
-        Ok(replica_set) => replica_set,
-        Err(err) => {
-            error!("Error creating bootstrap validator replicas_set: {}", err);
-            return;
-        }
-    };
-    let bootstrap_replica_set_name = match kub_controller
-        .deploy_replicas_set(&bootstrap_replica_set)
-        .await
-    {
-        Ok(replica_set) => {
-            info!("bootstrap validator replicas_set deployed successfully");
-            replica_set.metadata.name.unwrap()
-        }
-        Err(err) => {
-            error!(
-                "Error! Failed to deploy bootstrap validator replicas_set. err: {:?}",
-                err
-            );
-            return;
-        }
-    };
+    // let label_selector =
+    //     kub_controller.create_selector("app.kubernetes.io/name", "bootstrap-validator");
+    // let bootstrap_replica_set = match kub_controller
+    //     .create_bootstrap_validator_replicas_set(
+    //         bootstrap_container_name,
+    //         bootstrap_image_name,
+    //         BOOTSTRAP_VALIDATOR_REPLICAS,
+    //         config_map.metadata.name.clone(),
+    //         bootstrap_secret.metadata.name.clone(),
+    //         &label_selector,
+    //     )
+    //     .await
+    // {
+    //     Ok(replica_set) => replica_set,
+    //     Err(err) => {
+    //         error!("Error creating bootstrap validator replicas_set: {}", err);
+    //         return;
+    //     }
+    // };
+    // let bootstrap_replica_set_name = match kub_controller
+    //     .deploy_replicas_set(&bootstrap_replica_set)
+    //     .await
+    // {
+    //     Ok(replica_set) => {
+    //         info!("bootstrap validator replicas_set deployed successfully");
+    //         replica_set.metadata.name.unwrap()
+    //     }
+    //     Err(err) => {
+    //         error!(
+    //             "Error! Failed to deploy bootstrap validator replicas_set. err: {:?}",
+    //             err
+    //         );
+    //         return;
+    //     }
+    // };
 
-    let bootstrap_service =
-        kub_controller.create_validator_service("bootstrap-validator", &label_selector);
-    match kub_controller.deploy_service(&bootstrap_service).await {
-        Ok(_) => info!("bootstrap validator service deployed successfully"),
-        Err(err) => error!(
-            "Error! Failed to deploy bootstrap validator service. err: {:?}",
-            err
-        ),
-    }
+    // let bootstrap_service =
+    //     kub_controller.create_validator_service("bootstrap-validator", &label_selector);
+    // match kub_controller.deploy_service(&bootstrap_service).await {
+    //     Ok(_) => info!("bootstrap validator service deployed successfully"),
+    //     Err(err) => error!(
+    //         "Error! Failed to deploy bootstrap validator service. err: {:?}",
+    //         err
+    //     ),
+    // }
 
-    // wait for bootstrap replicaset to deploy
-    while {
-        match kub_controller
-            .check_replica_set_ready(bootstrap_replica_set_name.as_str())
-            .await
-        {
-            Ok(ok) => !ok, // Continue the loop if replica set is not ready: Ok(false)
-            Err(_) => panic!("Error occurred while checking replica set readiness"),
-        }
-    } {
-        info!("replica set: {} not ready...", bootstrap_replica_set_name);
-        thread::sleep(Duration::from_secs(1));
-    }
-    info!("replica set: {} Ready!", bootstrap_replica_set_name);
+    // // wait for bootstrap replicaset to deploy
+    // while {
+    //     match kub_controller
+    //         .check_replica_set_ready(bootstrap_replica_set_name.as_str())
+    //         .await
+    //     {
+    //         Ok(ok) => !ok, // Continue the loop if replica set is not ready: Ok(false)
+    //         Err(_) => panic!("Error occurred while checking replica set readiness"),
+    //     }
+    // } {
+    //     info!("replica set: {} not ready...", bootstrap_replica_set_name);
+    //     thread::sleep(Duration::from_secs(1));
+    // }
+    // info!("replica set: {} Ready!", bootstrap_replica_set_name);
 
-    // Create and deploy validators
-    for validator_index in 0..setup_config.num_validators {
-        let validator_secret = match kub_controller.create_validator_secret(validator_index) {
-            Ok(secret) => secret,
-            Err(err) => {
-                error!("Failed to create validator secret! {}", err);
-                return;
-            }
-        };
-        match kub_controller.deploy_secret(&validator_secret).await {
-            Ok(_) => (),
-            Err(err) => {
-                error!("{}", err);
-                return;
-            }
-        }
+    // // Create and deploy validators
+    // for validator_index in 0..setup_config.num_validators {
+    //     let validator_secret = match kub_controller.create_validator_secret(validator_index) {
+    //         Ok(secret) => secret,
+    //         Err(err) => {
+    //             error!("Failed to create validator secret! {}", err);
+    //             return;
+    //         }
+    //     };
+    //     match kub_controller.deploy_secret(&validator_secret).await {
+    //         Ok(_) => (),
+    //         Err(err) => {
+    //             error!("{}", err);
+    //             return;
+    //         }
+    //     }
 
-        let label_selector = kub_controller.create_selector(
-            "app.kubernetes.io/name",
-            format!("validator-{}", validator_index).as_str(),
-        );
+    //     let label_selector = kub_controller.create_selector(
+    //         "app.kubernetes.io/name",
+    //         format!("validator-{}", validator_index).as_str(),
+    //     );
 
-        let validator_replica_set = match kub_controller
-            .create_validator_replicas_set(
-                validator_container_name,
-                validator_index,
-                validator_image_name,
-                1,
-                config_map.metadata.name.clone(),
-                validator_secret.metadata.name.clone(),
-                &label_selector,
-            )
-            .await
-        {
-            Ok(replica_set) => replica_set,
-            Err(err) => {
-                error!("Error creating validator replicas_set: {}", err);
-                return;
-            }
-        };
+    //     let validator_replica_set = match kub_controller
+    //         .create_validator_replicas_set(
+    //             validator_container_name,
+    //             validator_index,
+    //             validator_image_name,
+    //             1,
+    //             config_map.metadata.name.clone(),
+    //             validator_secret.metadata.name.clone(),
+    //             &label_selector,
+    //         )
+    //         .await
+    //     {
+    //         Ok(replica_set) => replica_set,
+    //         Err(err) => {
+    //             error!("Error creating validator replicas_set: {}", err);
+    //             return;
+    //         }
+    //     };
 
-        let _ = match kub_controller
-            .deploy_replicas_set(&validator_replica_set)
-            .await
-        {
-            Ok(rs) => {
-                info!(
-                    "validator replica set ({}) deployed successfully",
-                    validator_index
-                );
-                rs.metadata.name.unwrap()
-            }
-            Err(err) => {
-                error!(
-                    "Error! Failed to deploy validator replica set: {}. err: {:?}",
-                    validator_index, err
-                );
-                return;
-            }
-        };
+    //     let _ = match kub_controller
+    //         .deploy_replicas_set(&validator_replica_set)
+    //         .await
+    //     {
+    //         Ok(rs) => {
+    //             info!(
+    //                 "validator replica set ({}) deployed successfully",
+    //                 validator_index
+    //             );
+    //             rs.metadata.name.unwrap()
+    //         }
+    //         Err(err) => {
+    //             error!(
+    //                 "Error! Failed to deploy validator replica set: {}. err: {:?}",
+    //                 validator_index, err
+    //             );
+    //             return;
+    //         }
+    //     };
 
-        let validator_service = kub_controller.create_validator_service(
-            format!("validator-{}", validator_index).as_str(),
-            &label_selector,
-        );
-        match kub_controller.deploy_service(&validator_service).await {
-            Ok(_) => info!(
-                "validator service ({}) deployed successfully",
-                validator_index
-            ),
-            Err(err) => error!(
-                "Error! Failed to deploy validator service: {}. err: {:?}",
-                validator_index, err
-            ),
-        }
-    }
+    //     let validator_service = kub_controller.create_validator_service(
+    //         format!("validator-{}", validator_index).as_str(),
+    //         &label_selector,
+    //     );
+    //     match kub_controller.deploy_service(&validator_service).await {
+    //         Ok(_) => info!(
+    //             "validator service ({}) deployed successfully",
+    //             validator_index
+    //         ),
+    //         Err(err) => error!(
+    //             "Error! Failed to deploy validator service: {}. err: {:?}",
+    //             validator_index, err
+    //         ),
+    //     }
+    // }
 }

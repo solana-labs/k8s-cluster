@@ -73,7 +73,7 @@ impl<'a> Kubernetes<'a> {
             name: Some("genesis-config".to_string()),
             ..Default::default()
         };
-        let genesis_tar_path = SOLANA_ROOT.join("config-k8s/bootstrap-validator/genesis.tar.bz2");
+        let genesis_tar_path = SOLANA_ROOT.join("config/bootstrap-validator/genesis.tar.bz2");
         let mut genesis_tar_file = File::open(genesis_tar_path).unwrap();
         let mut buffer = Vec::new();
 
@@ -262,13 +262,13 @@ impl<'a> Kubernetes<'a> {
     }
 
     pub fn create_bootstrap_secret(&self, secret_name: &str) -> Result<Secret, Box<dyn Error>> {
-        let faucet_key_path = SOLANA_ROOT.join("config-k8s");
+        let faucet_key_path = SOLANA_ROOT.join("config");
         let faucet_keypair =
             std::fs::read(faucet_key_path.join("faucet.json")).unwrap_or_else(|_| {
                 panic!("Failed to read faucet.json file! at: {:?}", faucet_key_path)
             });
 
-        let key_path = SOLANA_ROOT.join("config-k8s/bootstrap-validator");
+        let key_path = SOLANA_ROOT.join("config/bootstrap-validator");
 
         let identity_keypair = std::fs::read(key_path.join("identity.json"))
             .unwrap_or_else(|_| panic!("Failed to read identity.json file! at: {:?}", key_path));
@@ -332,7 +332,7 @@ impl<'a> Kubernetes<'a> {
 
     pub fn create_validator_secret(&self, validator_index: i32) -> Result<Secret, Box<dyn Error>> {
         let secret_name = format!("validator-accounts-secret-{}", validator_index);
-        let key_path = SOLANA_ROOT.join("config-k8s");
+        let key_path = SOLANA_ROOT.join("config");
 
         let mut data: BTreeMap<String, ByteString> = BTreeMap::new();
         let accounts = vec!["identity", "vote", "stake"];
