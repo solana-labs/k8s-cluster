@@ -20,7 +20,7 @@ pub const DEFAULT_MAX_GENESIS_ARCHIVE_UNPACKED_SIZE: u64 = 1073741824;
 // pub const DEFAULT_COMMISSION: u8 = 100;
 pub const DEFAULT_INTERNAL_NODE_STAKE_SOL: f64 = 10.0; // 10000000000 lamports
 pub const DEFAULT_INTERNAL_NODE_SOL: f64 = 500.0; // 500000000000 lamports
-pub const DEFAULT_BOOTSTRAP_NODE_STAKE_LAMPORTS: u64 = 1000000000; // 1 SOL
+pub const DEFAULT_BOOTSTRAP_NODE_STAKE_LAMPORTS: u64 = 10000000000; // 10 SOL
 pub const DEFAULT_BOOTSTRAP_NODE_LAMPORTS: u64 = 500000000000; // 500 SOL
 
 // fn output_keypair(keypair: &Keypair, outfile: &str, source: &str) -> Result<(), Box<dyn Error>> {
@@ -321,12 +321,13 @@ impl Genesis {
         args.extend(vec!["--cluster-type".to_string(), self.flags.cluster_type.clone()]);
         args.extend(vec!["--ledger".to_string(), self.config_dir.join("bootstrap-validator").to_string_lossy().to_string()]);
 
+        // Order of accounts matters here!!
         args.extend(
             vec![
                 "--bootstrap-validator".to_string(),
                 self.config_dir.join("bootstrap-validator/identity.json").to_string_lossy().to_string(),
+                self.config_dir.join("bootstrap-validator/vote-account.json").to_string_lossy().to_string(), 
                 self.config_dir.join("bootstrap-validator/stake-account.json").to_string_lossy().to_string(),
-                self.config_dir.join("bootstrap-validator/vote-account.json").to_string_lossy().to_string(),
             ]
         );
 
@@ -342,14 +343,17 @@ impl Genesis {
 
         //TODO see multinode-demo.sh. we need spl-genesis-args.sh
         
-
-
-
     }
 
     pub fn generate(&mut self) -> Result<(), Box<dyn Error>> {
+        let args = self.setup_genesis_flags();
+        debug!("genesis args: ");
+        for arg in &args {
+            debug!("{}", arg);
+        }
+        
         let output = Command::new("solana-genesis")
-            .args(&self.setup_genesis_flags())
+            .args(&args)
             .output() // Capture the output of the script
             .expect("Failed to execute solana-genesis");
 
