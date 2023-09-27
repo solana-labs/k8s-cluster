@@ -6,30 +6,6 @@ use std::process::Output;
 use {
     crate::{boxed_error, initialize_globals, SOLANA_ROOT},
     log::*,
-    // solana_clap_v3_utils::{input_parsers::STDOUT_OUTFILE_TOKEN, keygen},
-    // solana_entry::poh::compute_hashes_per_tick,
-    // solana_genesis::genesis_accounts::add_genesis_accounts,
-    // solana_ledger::{blockstore::create_new_ledger, blockstore_options::LedgerColumnOptions},
-    // solana_sdk::{
-    //     account::{Account, AccountSharedData},
-    //     bpf_loader_upgradeable::UpgradeableLoaderState,
-    //     clock,
-    //     epoch_schedule::EpochSchedule,
-    //     fee_calculator::{
-    //         FeeRateGovernor, DEFAULT_BURN_PERCENT, DEFAULT_TARGET_SIGNATURES_PER_SLOT,
-    //     },
-    //     genesis_config::{ClusterType, GenesisConfig, DEFAULT_GENESIS_FILE},
-    //     native_token::sol_to_lamports,
-    //     poh_config::PohConfig,
-    //     pubkey::Pubkey,
-    //     rent::Rent,
-    //     signature::{keypair_from_seed, write_keypair, write_keypair_file, Keypair, Signer},
-    //     signer::keypair::read_keypair_file,
-    //     stake::state::StakeStateV2,
-    //     system_program, timing,
-    // },
-    // solana_stake_program::stake_state,
-    // solana_vote_program::vote_state::{self, VoteState},
     std::{
         error::Error,
         path::PathBuf,
@@ -38,14 +14,14 @@ use {
 };
 
 // pub const DEFAULT_WORD_COUNT: usize = 12;
-// pub const DEFAULT_FAUCET_LAMPORTS: u64 = 500000000000000000;
-// pub const DEFAULT_MAX_GENESIS_ARCHIVE_UNPACKED_SIZE: u64 = 1073741824;
+pub const DEFAULT_FAUCET_LAMPORTS: u64 = 500000000000000000;
+pub const DEFAULT_MAX_GENESIS_ARCHIVE_UNPACKED_SIZE: u64 = 1073741824;
 // pub const DEFAULT_CLUSTER_TYPE: ClusterType = ClusterType::Development;
 // pub const DEFAULT_COMMISSION: u8 = 100;
 pub const DEFAULT_INTERNAL_NODE_STAKE_SOL: f64 = 10.0; // 10000000000 lamports
 pub const DEFAULT_INTERNAL_NODE_SOL: f64 = 500.0; // 500000000000 lamports
-// pub const DEFAULT_BOOTSTRAP_NODE_STAKE_SOL: f64 = 1.0;
-// pub const DEFAULT_BOOTSTRAP_NODE_SOL: f64 = 500.0;
+pub const DEFAULT_BOOTSTRAP_NODE_STAKE_LAMPORTS: u64 = 1000000000; // 1 SOL
+pub const DEFAULT_BOOTSTRAP_NODE_LAMPORTS: u64 = 500000000000; // 500 SOL
 
 // fn output_keypair(keypair: &Keypair, outfile: &str, source: &str) -> Result<(), Box<dyn Error>> {
 //     if outfile == STDOUT_OUTFILE_TOKEN {
@@ -158,15 +134,15 @@ pub const DEFAULT_INTERNAL_NODE_SOL: f64 = 500.0; // 500000000000 lamports
 // }
 
 pub struct GenesisFlags {
-    pub hashes_per_tick: Option<u64>,
+    pub hashes_per_tick: String,
     pub slots_per_epoch: Option<u64>,
     pub target_lamports_per_signature: Option<u64>,
     pub faucet_lamports: Option<u64>,
     pub enable_warmup_epochs: bool,
     pub max_genesis_archive_unpacked_size: Option<u64>,
-    // pub cluster_type: Option<ClusterType>,
-    pub bootstrap_validator_sol: Option<f64>,
-    pub bootstrap_validator_stake_sol: Option<f64>,
+    pub cluster_type: String,
+    pub bootstrap_validator_lamports: Option<f64>,
+    pub bootstrap_validator_stake_lamports: Option<f64>,
 }
 
 impl std::fmt::Display for GenesisFlags {
@@ -189,8 +165,8 @@ impl std::fmt::Display for GenesisFlags {
             self.faucet_lamports,
             self.enable_warmup_epochs,
             self.max_genesis_archive_unpacked_size,
-            self.bootstrap_validator_sol,
-            self.bootstrap_validator_stake_sol,
+            self.bootstrap_validator_lamports,
+            self.bootstrap_validator_stake_lamports,
         )
     }
 }
@@ -202,19 +178,10 @@ pub struct SetupConfig<'a> {
     pub prebuild_genesis: bool,
 }
 
-// pub struct ValidatorAccountKeypairs {
-//     pub vote_account: Keypair,
-//     pub identity: Keypair,
-//     pub stake_account: Keypair,
-// }
-
 pub struct Genesis {
     pub flags: GenesisFlags,
     pub config_dir: PathBuf,
-    // pub validator_keypairs: Vec<ValidatorAccountKeypairs>,
-    // pub faucet_keypair: Option<Keypair>,
-    // pub genesis_config: Option<GenesisConfig>,
-    // pub all_pubkeys: Vec<Pubkey>,
+    pub args: Vec<String>,
 }
 
 impl Genesis {
@@ -228,10 +195,7 @@ impl Genesis {
         Genesis {
             flags,
             config_dir,
-            // validator_keypairs: Vec::default(),
-            // faucet_keypair: None,
-            // genesis_config: None,
-            // all_pubkeys: Vec::default(),
+            args: Vec::default(),
         }
     }
 
@@ -321,6 +285,84 @@ impl Genesis {
         Ok(())
 
     }
+
+    fn setup_genesis_flags(&self) -> Vec<String> {
+        let mut args: Vec<String> = Vec::new();
+        args.push("--bootstrap-validator-stake-lamports".to_string());
+        match self.flags.bootstrap_validator_stake_lamports {
+            Some(lamports) => args.push(lamports.to_string()),
+            None => args.push(DEFAULT_BOOTSTRAP_NODE_STAKE_LAMPORTS.to_string()),   
+        }
+        args.push("--bootstrap-validator-lamports".to_string());
+        match self.flags.bootstrap_validator_lamports {
+            Some(lamports) => args.push(lamports.to_string()),
+            None => args.push(DEFAULT_BOOTSTRAP_NODE_LAMPORTS.to_string()),   
+        }
+
+        args.extend(vec!["--hashes-per-tick".to_string(), self.flags.hashes_per_tick.clone()]);
+
+        args.push("--max-genesis-archive-unpacked-size".to_string());
+        match self.flags.max_genesis_archive_unpacked_size {
+            Some(size) => args.push(size.to_string()),
+            None => args.push(DEFAULT_MAX_GENESIS_ARCHIVE_UNPACKED_SIZE.to_string()),
+        }
+
+        if self.flags.enable_warmup_epochs {
+            args.push("--enable-warmup-epochs".to_string());
+        }
+
+        args.push("--faucet-lamports".to_string());
+        match self.flags.faucet_lamports {
+            Some(lamports) => args.push(lamports.to_string()),
+            None => args.push(DEFAULT_FAUCET_LAMPORTS.to_string()),
+        }
+
+        args.extend(vec!["--faucet-pubkey".to_string(), self.config_dir.join("faucet.json").to_string_lossy().to_string()]);
+        args.extend(vec!["--cluster-type".to_string(), self.flags.cluster_type.clone()]);
+        args.extend(vec!["--ledger".to_string(), self.config_dir.join("bootstrap-validator").to_string_lossy().to_string()]);
+
+        args.extend(
+            vec![
+                "--bootstrap-validator".to_string(),
+                self.config_dir.join("bootstrap-validator/identity.json").to_string_lossy().to_string(),
+                self.config_dir.join("bootstrap-validator/stake-account.json").to_string_lossy().to_string(),
+                self.config_dir.join("bootstrap-validator/vote-account.json").to_string_lossy().to_string(),
+            ]
+        );
+
+        if let Some(slots_per_epoch) = self.flags.slots_per_epoch {
+            args.extend(vec!["--slots-per-epoch".to_string(), slots_per_epoch.to_string()]);
+        }
+
+        if let Some(lamports_per_signature) = self.flags.target_lamports_per_signature {
+            args.extend(vec!["--target-lamports-per-signature".to_string(), lamports_per_signature.to_string()]);
+        }
+
+        args
+
+        //TODO see multinode-demo.sh. we need spl-genesis-args.sh
+        
+
+
+
+    }
+
+    pub fn generate(&mut self) -> Result<(), Box<dyn Error>> {
+        let output = Command::new("solana-genesis")
+            .args(&self.setup_genesis_flags())
+            .output() // Capture the output of the script
+            .expect("Failed to execute solana-genesis");
+
+        if !output.status.success() {
+            return Err(boxed_error!(format!(
+                "Failed to create genesis. err: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
+        Ok(())
+    }
+
+
 
     // // Create Genesis
     // pub fn generate(&mut self) -> Result<(), Box<dyn Error>> {
@@ -626,17 +668,6 @@ impl Genesis {
     //     Ok(general_purpose::STANDARD.encode(input_content))
     // }
 
-    // // should be run inside pod
-    // pub fn verify_genesis_from_file(&self) -> Result<(), Box<dyn Error>> {
-    //     let path = self.config_dir.join("bootstrap-validator");
-    //     let loaded_config = GenesisConfig::load(&path)?;
-    //     info!("hash of loaded genesis: {}", loaded_config.hash());
-    //     match &self.genesis_config {
-    //         Some(config) => assert_eq!(config.hash(), loaded_config.hash()),
-    //         None => return Err(boxed_error!("No genesis config set in Genesis struct")),
-    //     };
-    //     Ok(())
-    // }
 
     // pub fn ensure_no_dup_pubkeys(&self) {
     //     // Ensure there are no duplicated pubkeys
@@ -648,63 +679,4 @@ impl Genesis {
     //         panic!("Error: validator pubkeys have duplicates!");
     //     }
     // }
-}
-
-#[cfg(test)]
-mod tests {
-    use {
-        super::*,
-        solana_sdk::{
-            pubkey::Pubkey,
-            signature::{Keypair, Signer},
-        },
-        std::path::PathBuf,
-    };
-    fn make_tmp_path(name: &str) -> PathBuf {
-        let out_dir = std::env::var("FARF_DIR").unwrap_or_else(|_| "farf".to_string());
-        let keypair = Keypair::new();
-
-        let path = [
-            out_dir,
-            "tmp".to_string(),
-            format!("{}-{}", name, keypair.pubkey()),
-        ]
-        .iter()
-        .collect();
-
-        // whack any possible collision
-        let _ignored = std::fs::remove_dir_all(&path);
-        // whack any possible collision
-        let _ignored = std::fs::remove_file(&path);
-
-        path
-    }
-
-    #[test]
-    fn test_genesis_config() {
-        let faucet_keypair = Keypair::new();
-        let mut config = GenesisConfig::default();
-        config.add_account(
-            faucet_keypair.pubkey(),
-            AccountSharedData::new(10_000, 0, &Pubkey::default()),
-        );
-        config.add_account(
-            solana_sdk::pubkey::new_rand(),
-            AccountSharedData::new(1, 0, &Pubkey::default()),
-        );
-        config.add_native_instruction_processor("hi".to_string(), solana_sdk::pubkey::new_rand());
-
-        assert_eq!(config.accounts.len(), 2);
-        assert!(config
-            .accounts
-            .iter()
-            .any(|(pubkey, account)| *pubkey == faucet_keypair.pubkey()
-                && account.lamports == 10_000));
-
-        let path = &make_tmp_path("genesis_config");
-        config.write(path).expect("write");
-        let loaded_config = GenesisConfig::load(path).expect("load");
-        assert_eq!(config.hash(), loaded_config.hash());
-        let _ignored = std::fs::remove_file(path);
-    }
 }
