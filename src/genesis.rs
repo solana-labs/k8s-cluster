@@ -1,4 +1,3 @@
-
 use {
     crate::{boxed_error, initialize_globals, SOLANA_ROOT},
     log::*,
@@ -82,9 +81,7 @@ impl Genesis {
         }
     }
 
-    pub fn generate_keypair(
-        &self, output_path: PathBuf
-    ) -> Output {
+    pub fn generate_keypair(&self, output_path: PathBuf) -> Output {
         Command::new("solana-keygen")
             .arg("new")
             .arg("--no-bip39-passphrase")
@@ -166,7 +163,6 @@ impl Genesis {
             }
         }
         Ok(())
-
     }
 
     fn setup_genesis_flags(&self) -> Vec<String> {
@@ -174,15 +170,18 @@ impl Genesis {
         args.push("--bootstrap-validator-stake-lamports".to_string());
         match self.flags.bootstrap_validator_stake_lamports {
             Some(lamports) => args.push(lamports.to_string()),
-            None => args.push(DEFAULT_BOOTSTRAP_NODE_STAKE_LAMPORTS.to_string()),   
+            None => args.push(DEFAULT_BOOTSTRAP_NODE_STAKE_LAMPORTS.to_string()),
         }
         args.push("--bootstrap-validator-lamports".to_string());
         match self.flags.bootstrap_validator_lamports {
             Some(lamports) => args.push(lamports.to_string()),
-            None => args.push(DEFAULT_BOOTSTRAP_NODE_LAMPORTS.to_string()),   
+            None => args.push(DEFAULT_BOOTSTRAP_NODE_LAMPORTS.to_string()),
         }
 
-        args.extend(vec!["--hashes-per-tick".to_string(), self.flags.hashes_per_tick.clone()]);
+        args.extend(vec![
+            "--hashes-per-tick".to_string(),
+            self.flags.hashes_per_tick.clone(),
+        ]);
 
         args.push("--max-genesis-archive-unpacked-size".to_string());
         match self.flags.max_genesis_archive_unpacked_size {
@@ -200,32 +199,59 @@ impl Genesis {
             None => args.push(DEFAULT_FAUCET_LAMPORTS.to_string()),
         }
 
-        args.extend(vec!["--faucet-pubkey".to_string(), self.config_dir.join("faucet.json").to_string_lossy().to_string()]);
-        args.extend(vec!["--cluster-type".to_string(), self.flags.cluster_type.clone()]);
-        args.extend(vec!["--ledger".to_string(), self.config_dir.join("bootstrap-validator").to_string_lossy().to_string()]);
+        args.extend(vec![
+            "--faucet-pubkey".to_string(),
+            self.config_dir
+                .join("faucet.json")
+                .to_string_lossy()
+                .to_string(),
+        ]);
+        args.extend(vec![
+            "--cluster-type".to_string(),
+            self.flags.cluster_type.clone(),
+        ]);
+        args.extend(vec![
+            "--ledger".to_string(),
+            self.config_dir
+                .join("bootstrap-validator")
+                .to_string_lossy()
+                .to_string(),
+        ]);
 
         // Order of accounts matters here!!
-        args.extend(
-            vec![
-                "--bootstrap-validator".to_string(),
-                self.config_dir.join("bootstrap-validator/identity.json").to_string_lossy().to_string(),
-                self.config_dir.join("bootstrap-validator/vote-account.json").to_string_lossy().to_string(), 
-                self.config_dir.join("bootstrap-validator/stake-account.json").to_string_lossy().to_string(),
-            ]
-        );
+        args.extend(vec![
+            "--bootstrap-validator".to_string(),
+            self.config_dir
+                .join("bootstrap-validator/identity.json")
+                .to_string_lossy()
+                .to_string(),
+            self.config_dir
+                .join("bootstrap-validator/vote-account.json")
+                .to_string_lossy()
+                .to_string(),
+            self.config_dir
+                .join("bootstrap-validator/stake-account.json")
+                .to_string_lossy()
+                .to_string(),
+        ]);
 
         if let Some(slots_per_epoch) = self.flags.slots_per_epoch {
-            args.extend(vec!["--slots-per-epoch".to_string(), slots_per_epoch.to_string()]);
+            args.extend(vec![
+                "--slots-per-epoch".to_string(),
+                slots_per_epoch.to_string(),
+            ]);
         }
 
         if let Some(lamports_per_signature) = self.flags.target_lamports_per_signature {
-            args.extend(vec!["--target-lamports-per-signature".to_string(), lamports_per_signature.to_string()]);
+            args.extend(vec![
+                "--target-lamports-per-signature".to_string(),
+                lamports_per_signature.to_string(),
+            ]);
         }
 
         args
 
         //TODO see multinode-demo.sh. we need spl-genesis-args.sh
-        
     }
 
     pub fn generate(&mut self) -> Result<(), Box<dyn Error>> {
@@ -234,7 +260,7 @@ impl Genesis {
         for arg in &args {
             debug!("{}", arg);
         }
-        
+
         let output = Command::new("solana-genesis")
             .args(&args)
             .output() // Capture the output of the script

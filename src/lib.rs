@@ -1,11 +1,7 @@
 use {
     lazy_static::lazy_static,
     log::*,
-    std::{
-        env,
-
-        path::PathBuf,
-    },
+    std::{env, path::PathBuf},
 };
 
 lazy_static! {
@@ -28,8 +24,8 @@ pub enum ValidatorType {
 }
 
 pub fn get_solana_root() -> PathBuf {
-    let solana_root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("$CARGO_MANIFEST_DIR"))
-        .to_path_buf();
+    let solana_root =
+        PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("$CARGO_MANIFEST_DIR")).to_path_buf();
     info!("solana root: {:?}", solana_root);
     solana_root
 }

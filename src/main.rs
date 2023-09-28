@@ -3,8 +3,7 @@ use {
     log::*,
     solana_k8s_cluster::{
         genesis::{
-            Genesis, GenesisFlags, SetupConfig,
-             DEFAULT_INTERNAL_NODE_SOL,
+            Genesis, GenesisFlags, SetupConfig, DEFAULT_INTERNAL_NODE_SOL,
             DEFAULT_INTERNAL_NODE_STAKE_SOL,
         },
         initialize_globals,
@@ -177,7 +176,10 @@ async fn main() {
     };
 
     let genesis_flags = GenesisFlags {
-        hashes_per_tick: matches.value_of("hashes_per_tick").unwrap_or_default().to_string(),
+        hashes_per_tick: matches
+            .value_of("hashes_per_tick")
+            .unwrap_or_default()
+            .to_string(),
         slots_per_epoch: matches.value_of("slots_per_epoch").map(|value_str| {
             value_str
                 .parse()
@@ -203,14 +205,17 @@ async fn main() {
                     .parse()
                     .expect("Invalid value for max_genesis_archive_unpacked_size")
             }),
-        cluster_type: matches.value_of("cluster_type").unwrap_or_default().to_string(),
-        bootstrap_validator_lamports: matches
-            .value_of("bootstrap_validator_sol")
-            .map(|value_str| {
+        cluster_type: matches
+            .value_of("cluster_type")
+            .unwrap_or_default()
+            .to_string(),
+        bootstrap_validator_lamports: matches.value_of("bootstrap_validator_sol").map(
+            |value_str| {
                 value_str
                     .parse()
                     .expect("Invalid value for bootstrap_validator_sol")
-            }),
+            },
+        ),
         bootstrap_validator_stake_lamports: matches.value_of("bootstrap_validator_stake_sol").map(
             |value_str| {
                 value_str
