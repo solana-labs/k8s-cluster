@@ -23,7 +23,7 @@ cargo run --bin solana-k8s --
     --validator-image <registry>/validator-<image-name>:<tag>
 ```
 
-2) Run the following for validator/genesis configurations:
+2) Run the following for genesis configuration flags:
 ```
 cargo run --bin solana-k8s -- --help
 ```
@@ -49,4 +49,4 @@ solana -ul validators # should see `--num-validators`+1 current validators (incl
 - Due to versioning errors between `kube-rs`/`k8s-openapi` and the Solana monorepo, we use the `solana-cli` for building genesis and not the actual Solana rust libraries.
 - Registry needs to be remotely accessible by all monogon nodes
 - Have tested deployments of up to 200 validators
-- Additional validator commandline flags are coming....stay tuned
+- Currently only support genesis config flags and a few validator runtime flags. more to come
