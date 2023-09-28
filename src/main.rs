@@ -67,78 +67,7 @@ fn parse_matches() -> ArgMatches<'static> {
                 .required(true)
                 .help("Docker Image of Validator to deploy"),
         )
-        .arg(
-            Arg::with_name("release_channel")
-                .long("release-channel")
-                .takes_value(true)
-                .default_value("")
-                .help("Optional: release version. e.g. v1.16.5"),
-        )
-        .arg(
-            Arg::with_name("deploy_method")
-                .long("deploy-method")
-                .takes_value(true)
-                .possible_values(&["local", "tar", "skip"])
-                .default_value("local")
-                .help("Deploy method. tar, local, skip. [default: local]"),
-        )
-        .arg(
-            Arg::with_name("do_build")
-                .long("do-build")
-                .help("Enable building for building from local repo"),
-        )
-        .arg(
-            Arg::with_name("debug_build")
-                .long("debug-build")
-                .help("Enable debug build"),
-        )
-        .arg(
-            Arg::with_name("profile_build")
-                .long("profile-build")
-                .help("Enable Profile Build flags"),
-        )
-        .arg(
-            Arg::with_name("docker_build")
-                .long("docker-build")
-                .requires("registry_name")
-                .help("Build Docker images. If not set, will assume local docker image should be used"),
-        )
-        .arg(
-            Arg::with_name("registry_name")
-                .long("registry")
-                .takes_value(true)
-                .required_if("docker_build", "true")
-                .help("Registry to push docker image to"),
-        )
-        .arg(
-            Arg::with_name("image_name")
-                .long("image-name")
-                .takes_value(true)
-                .default_value_if("docker_build", None, "k8s-cluster-image")
-                .requires("docker_build")
-                .help("Docker image name. Will be prepended with validator_type (bootstrap or validator)"),
-        )
-        .arg(
-            Arg::with_name("base_image")
-                .long("base-image")
-                .takes_value(true)
-                .default_value_if("docker_build", None, "ubuntu:20.04")
-                .requires("docker_build")
-                .help("Docker base image"),
-        )
-        .arg(
-            Arg::with_name("image_tag")
-                .long("tag")
-                .takes_value(true)
-                .default_value_if("docker_build", None, "latest")
-                .help("Docker image tag."),
-        )
         // Genesis config
-        .arg(
-            Arg::with_name("prebuild_genesis")
-                .long("prebuild-genesis")
-                .help("Prebuild gensis. Generates keys for validators and writes to file"),
-        )
         .arg(
             Arg::with_name("hashes_per_tick")
                 .long("hashes-per-tick")
