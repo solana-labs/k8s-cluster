@@ -6,13 +6,11 @@
 /solana-metrics.tar.bz2
 /target/
 /test-ledger/
-/docker-build/
 
 **/*.rs.bk
 .cargo
 
 /config/
-/config-k8s/
 
 .cache
 
