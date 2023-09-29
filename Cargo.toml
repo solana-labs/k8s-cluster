@@ -7,10 +7,9 @@ homepage = "https://solanalabs.com/"
 license = "Apache-2.0"
 edition = "2021"
 publish = false
-description = "Kubernetes Validator Deployment for Testing"
+description = "Kubernetes Validator Deployment for Testing. Deployment and Runtime Component"
 
 [dependencies]
-
 base64 = "0.21.4"
 clap = "2.33.1"
 kube = "0.85.0"
@@ -20,12 +19,6 @@ log = "0.4.20"
 solana-logger = "1.16.14"
 tiny-bip39 = "0.8.2"
 tokio = { version = "1.29.1", features = ["full"] }
-
-
-[dev-dependencies]
-anyhow = "1.0.75"
-num_cpus = "1.16.0"
-serial_test = "2.0.0"
 
 [build-dependencies]
 rustc_version = "0.4"
